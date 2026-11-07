@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Voie lactée">
+<meta name="theme-color" content="#070914">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;height:100%}body{margin:0;font:14px system-ui,sans-serif}[hidden]{display:none!important}</style>
+<title>La Voie lactée</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@500;700&display=swap">
+<style>
+/* Layout : un hublot sur le cosmos, tableau de bord en haut, échelle des planètes, zone de jeu plein écran téléphone. */
+:root{
+  --void:#070914;        /* vide spatial */
+  --panel:#11152a;       /* tableau de bord */
+  --nebula:#7b5cff;      /* violet nébuleuse */
+  --star:#f1eee6;        /* lumière d'étoile */
+  --sun:#ffc24a;         /* or solaire */
+  --red:#ff4d5e;         /* ligne rouge */
+  --display:"Syne", "Trebuchet MS", sans-serif;
+  --body:"DM Sans", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html,body{height:100%}
+body{background:var(--void);color:var(--star);font-family:var(--body);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+.app{height:100%;display:flex;flex-direction:column;gap:10px;padding-block:10px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));box-sizing:border-box;max-width:520px;margin:0 auto}
+.dash{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--display);font-weight:800;font-size:1.45rem;line-height:1;letter-spacing:-.01em;background:linear-gradient(90deg,#fff 0%,#c9b8ff 55%,var(--nebula) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand small{display:block;font-family:var(--body);font-weight:500;font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--star);-webkit-text-fill-color:var(--star);opacity:.55;margin-top:5px}
+.scores{display:flex;gap:14px;align-items:flex-end}
+.stat{text-align:right}
+.stat span{display:block;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;opacity:.55}
+.stat b{font-family:var(--display);font-size:1.4rem;font-variant-numeric:tabular-nums;line-height:1}
+.next{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--panel);border:1px solid rgba(201,184,255,.18);border-radius:12px;padding:4px 8px}
+.next span{font-size:.56rem;letter-spacing:.16em;text-transform:uppercase;opacity:.55}
+.next canvas{width:30px;height:30px}
+.ladder{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border-radius:999px;padding:5px 12px;gap:2px}
+.ladder canvas{width:24px;height:24px}
+.ladder em{font-style:normal;opacity:.3;font-size:.65rem}
+.stage{flex:1;min-height:0;position:relative;display:flex;justify-content:center;align-items:flex-start}
+#cv{display:block;border-radius:18px;box-shadow:0 0 0 1px rgba(201,184,255,.14),0 20px 50px rgba(0,0,0,.6)}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.btn{font:700 .85rem var(--body);color:var(--star);background:transparent;border:1px solid rgba(241,238,230,.25);border-radius:999px;padding:8px 14px;cursor:pointer}
+.btn:focus-visible{outline:2px solid var(--nebula);outline-offset:2px}
+.btn.primary{background:var(--sun);color:#2a1d00;border-color:var(--sun)}
+.over{position:absolute;top:0;display:flex;align-items:center;justify-content:center;background:rgba(7,9,20,.8);border-radius:18px}
+.card{text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;padding:20px}
+.card h2{font-family:var(--display);font-weight:800;font-size:1.9rem;margin:0;color:var(--sun);text-wrap:balance}
+.card p{margin:0;opacity:.85}
+.card .big{font-family:var(--display);font-size:2.6rem;font-variant-numeric:tabular-nums;line-height:1}
+.hint{font-size:.74rem;opacity:.5;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="dash">
+    <div class="brand">La Voie lactée<small>Fusionne les planètes</small></div>
+    <div class="scores">
+      <div class="stat"><span>Score</span><b id="score">0</b></div>
+      <div class="stat"><span>Record</span><b id="best">0</b></div>
+      <div class="next"><span>Suivante</span><canvas id="nextcv" width="60" height="60"></canvas></div>
+    </div>
+  </div>
+  <div class="ladder" id="ladder" aria-label="Échelle des planètes"></div>
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="over" id="over" hidden>
+      <div class="card">
+        <h2>Galaxie saturée</h2>
+        <p>Score final</p>
+        <div class="big" id="final">0</div>
+        <p id="record-msg"></p>
+        <button class="btn primary" id="again">Nouveau big bang</button>
+      </div>
+    </div>
+  </div>
+  <div class="bar">
+    <button class="btn" id="sound" aria-pressed="true">🔊 Son</button>
+    <div class="hint">Glisse pour viser, lâche pour lancer</div>
+    <button class="btn" id="restart">Recommencer</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script>
+(function(){
+const {Engine, Bodies, Composite, Events, Body} = Matter;
+
+// Des plus petites aux plus grosses
+const PLANETS = [
+  {n:"Pluton",  r:15, base:["#efe3d3","#a38c74"], kind:"rock"},
+  {n:"Mercure", r:21, base:["#d7d3cf","#6f6a66"], kind:"crater"},
+  {n:"Mars",    r:28, base:["#ff9a6b","#a8391c"], kind:"crater"},
+  {n:"Terre",   r:37, base:["#7fc8ff","#1f5fb8"], kind:"earth"},
+  {n:"Neptune", r:47, base:["#8fb4ff","#2a3fbf"], kind:"bands"},
+  {n:"Saturne", r:58, base:["#f6e2a8","#b88a3e"], kind:"rings"},
+  {n:"Jupiter", r:70, base:["#f5d3a8","#a8693a"], kind:"jupiter"},
+  {n:"Soleil",  r:84, base:["#fff6c2","#ff8a1c"], kind:"sun"},
+];
+const POINTS = [0, 2, 5, 10, 18, 30, 50, 80];
+const NOVA_BONUS = 200;
+
+const W = 360, H = 600, FLOOR = 14;
+const LINE_Y = 110, DROP_Y = 46;
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const stage = document.getElementById('stage');
+const $score = document.getElementById('score');
+const $best = document.getElementById('best');
+const $over = document.getElementById('over');
+const nextCtx = document.getElementById('nextcv').getContext('2d');
+
+// --- Dessin d'une planète (centrée en 0,0) ---
+function seeded(i){ let s = i*9301+49297; return ()=> (s = (s*9301+49297)%233280)/233280; }
+const FEATURES = PLANETS.map((p,i)=>{
+  const rnd = seeded(i+3);
+  return Array.from({length:7},()=>({x:(rnd()-.5)*1.3, y:(rnd()-.5)*1.3, s:.12+rnd()*.22}));
+});
+
+function drawPlanet(c, lvl, r, angle){
+  const p = PLANETS[lvl];
+  const body = p.kind==="rings" ? r*0.66 : r;
+  c.save();
+  if(p.kind==="sun"){
+    const glow = c.createRadialGradient(0,0,r*.5,0,0,r*1.25);
+    glow.addColorStop(0,'rgba(255,190,70,.55)'); glow.addColorStop(1,'rgba(255,140,30,0)');
+    c.fillStyle = glow; c.beginPath(); c.arc(0,0,r*1.25,0,Math.PI*2); c.fill();
+  }
+  if(p.kind==="rings"){ drawRing(c, r, body, angle, true); }
+  // sphère
+  c.beginPath(); c.arc(0,0,body,0,Math.PI*2);
+  const g = c.createRadialGradient(-body*.35,-body*.35,body*.1,0,0,body);
+  g.addColorStop(0,p.base[0]); g.addColorStop(1,p.base[1]);
+  c.fillStyle = g; c.fill();
+  // détails qui tournent avec la planète
+  c.save(); c.beginPath(); c.arc(0,0,body,0,Math.PI*2); c.clip(); c.rotate(angle||0);
+  const f = FEATURES[lvl];
+  if(p.kind==="crater"||p.kind==="rock"){
+    for(const k of f){ c.fillStyle='rgba(0,0,0,.16)'; c.beginPath(); c.arc(k.x*body,k.y*body,k.s*body*.7,0,Math.PI*2); c.fill(); }
+  } else if(p.kind==="earth"){
+    c.fillStyle='#3fae5a';
+    for(const k of f.slice(0,5)){ c.beginPath(); c.ellipse(k.x*body,k.y*body,k.s*body*1.4,k.s*body*.9,k.x*3,0,Math.PI*2); c.fill(); }
+    c.fillStyle='rgba(255,255,255,.55)';
+    c.beginPath(); c.ellipse(-body*.2,-body*.55,body*.4,body*.08,.2,0,Math.PI*2); c.fill();
+  } else if(p.kind==="bands"||p.kind==="jupiter"||p.kind==="rings"){
+    const cols = p.kind==="jupiter" ? ['rgba(150,80,40,.35)','rgba(255,240,220,.3)','rgba(170,95,50,.3)']
+               : p.kind==="rings" ? ['rgba(160,120,60,.25)','rgba(255,245,210,.25)']
+               : ['rgba(255,255,255,.14)','rgba(20,30,120,.2)'];
+    for(let y=-body, i=0; y<body; y+=body*.22, i++){
+      c.fillStyle = cols[i%cols.length]; c.fillRect(-body, y, body*2, body*.12);
+    }
+    if(p.kind==="jupiter"){ c.fillStyle='rgba(190,70,40,.75)'; c.beginPath(); c.ellipse(body*.3,body*.28,body*.2,body*.11,0,0,Math.PI*2); c.fill(); }
+  } else if(p.kind==="sun"){
+    for(const k of f){ c.fillStyle='rgba(255,255,255,.18)'; c.beginPath(); c.arc(k.x*body,k.y*body,k.s*body*.6,0,Math.PI*2); c.fill(); }
+  }
+  c.restore();
+  // ombre de terminateur
+  c.beginPath(); c.arc(0,0,body,0,Math.PI*2);
+  const sh = c.createRadialGradient(-body*.4,-body*.4,body*.3,0,0,body*1.05);
+  sh.addColorStop(0,'rgba(0,0,0,0)'); sh.addColorStop(1,p.kind==="sun"?'rgba(200,60,0,.25)':'rgba(0,0,10,.45)');
+  c.fillStyle = sh; c.fill();
+  if(p.kind==="rings"){ drawRing(c, r, body, angle, false); }
+  c.restore();
+}
+function drawRing(c, r, body, angle, back){
+  c.save(); c.rotate(-0.35 + (angle||0)*0.15);
+  c.beginPath();
+  if(back){ c.ellipse(0,0,r,r*.3,0,Math.PI,Math.PI*2); }
+  else { c.ellipse(0,0,r,r*.3,0,0,Math.PI); }
+  c.lineWidth = r*.12; c.strokeStyle='rgba(230,205,150,.85)'; c.stroke();
+  c.lineWidth = r*.04; c.strokeStyle='rgba(120,90,50,.5)'; c.stroke();
+  c.restore();
+}
+
+// Échelle en haut
+const ladder = document.getElementById('ladder');
+PLANETS.forEach((p,i)=>{
+  const m = document.createElement('canvas'); m.width=48; m.height=48; m.title=p.n;
+  const mc = m.getContext('2d'); mc.translate(24,24);
+  const rr = p.kind==="sun" ? 16 : 20; drawPlanet(mc, i, rr, 0);
+  ladder.appendChild(m);
+  if(i<PLANETS.length-1){ const e=document.createElement('em'); e.textContent='›'; ladder.appendChild(e); }
+});
+
+function drawNext(lvl){
+  nextCtx.clearRect(0,0,60,60); nextCtx.save(); nextCtx.translate(30,30);
+  drawPlanet(nextCtx, lvl, 22, 0); nextCtx.restore();
+}
+
+// Étoiles de fond
+const STARS = Array.from({length:110},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.3+.2,p:Math.random()*6}));
+
+let scale = 1;
+function resize(){
+  const r = stage.getBoundingClientRect();
+  scale = Math.min(r.width / W, r.height / H);
+  const dpr = window.devicePixelRatio || 1;
+  cv.style.width = (W*scale)+'px'; cv.style.height = (H*scale)+'px';
+  cv.width = Math.round(W*scale*dpr); cv.height = Math.round(H*scale*dpr);
+  ctx.setTransform(scale*dpr,0,0,scale*dpr,0,0);
+  $over.style.width = cv.style.width; $over.style.height = cv.style.height;
+  $over.style.left = (r.width - W*scale)/2 + 'px';
+}
+window.addEventListener('resize', resize);
+
+let best = 0;
+try{ best = parseInt(localStorage.getItem('voie-lactee-best')||'0',10)||0; }catch(e){}
+$best.textContent = best;
+
+// Son
+let audio = null, soundOn = true;
+function beep(level){
+  if(!soundOn) return;
+  try{
+    if(!audio) audio = new (window.AudioContext||window.webkitAudioContext)();
+    const t = audio.currentTime;
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = 'sine';
+    const f = 300 + level*90;
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f*2, t+0.15);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.2, t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.35);
+    o.connect(g).connect(audio.destination);
+    o.start(t); o.stop(t+0.36);
+  }catch(e){}
+}
+document.getElementById('sound').addEventListener('click', e=>{
+  soundOn = !soundOn;
+  e.currentTarget.textContent = soundOn ? '🔊 Son' : '🔇 Muet';
+  e.currentTarget.setAttribute('aria-pressed', soundOn);
+});
+
+// Moteur
+let engine, score, current, nextLvl, aimX, canDrop, gameOver, pops;
+function randLvl(){ return Math.floor(Math.random()*3); }
+
+function makePlanet(x, y, lvl){
+  const b = Bodies.circle(x, y, PLANETS[lvl].r, {
+    restitution: 0.15, friction: 0.35, frictionStatic: 0.5, density: 0.0015, label:'planet'
+  });
+  b.lvl = lvl; b.born = performance.now(); b.above = 0; b.merging = false;
+  return b;
+}
+
+function start(){
+  engine = Engine.create();
+  engine.gravity.y = 1.1;
+  const opts = {isStatic:true, label:'wall'};
+  Composite.add(engine.world, [
+    Bodies.rectangle(W/2, H - FLOOR + 30, W + 120, 60, opts),
+    Bodies.rectangle(-30, H/2, 60, H*3, opts),
+    Bodies.rectangle(W + 30, H/2, 60, H*3, opts),
+  ]);
+  Events.on(engine, 'collisionStart', onCollide);
+  Events.on(engine, 'collisionActive', onCollide);
+  score = 0; $score.textContent = 0;
+  current = randLvl(); nextLvl = randLvl(); drawNext(nextLvl);
+  aimX = W/2; canDrop = true; gameOver = false; pops = [];
+  $over.hidden = true;
+}
+
+function onCollide(ev){
+  for(const p of ev.pairs){
+    const a = p.bodyA, b = p.bodyB;
+    if(a.label!=='planet' || b.label!=='planet') continue;
+    if(a.lvl !== b.lvl || a.merging || b.merging) continue;
+    a.merging = b.merging = true;
+    const x = (a.position.x+b.position.x)/2, y = (a.position.y+b.position.y)/2;
+    const lvl = a.lvl;
+    setTimeout(()=>{
+      Composite.remove(engine.world, [a,b]);
+      if(lvl === PLANETS.length-1){
+        addScore(NOVA_BONUS);
+        pops.push({x,y,r:PLANETS[lvl].r,t:performance.now(),nova:true});
+        beep(lvl+3);
+      } else {
+        const n = makePlanet(x, y, lvl+1);
+        Body.setVelocity(n, {x:0, y:-1});
+        Composite.add(engine.world, n);
+        addScore(POINTS[lvl+1]);
+        pops.push({x,y,r:PLANETS[lvl+1].r,t:performance.now()});
+        beep(lvl+1);
+      }
+    },0);
+  }
+}
+
+function addScore(n){
+  score += n; $score.textContent = score;
+  if(score > best){ best = score; $best.textContent = best; try{localStorage.setItem('voie-lactee-best', best);}catch(e){} }
+}
+
+// Contrôles
+function toWorldX(clientX){ const r = cv.getBoundingClientRect(); return (clientX - r.left)/scale; }
+function clampAim(x){ const r = PLANETS[current].r; return Math.max(r+2, Math.min(W-r-2, x)); }
+let pointerDown = false;
+cv.addEventListener('pointerdown', e=>{ pointerDown = true; aimX = clampAim(toWorldX(e.clientX)); cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e=>{ aimX = clampAim(toWorldX(e.clientX)); });
+cv.addEventListener('pointerup', e=>{ if(!pointerDown) return; pointerDown=false; aimX = clampAim(toWorldX(e.clientX)); drop(); });
+window.addEventListener('keydown', e=>{
+  if(e.key==='ArrowLeft') aimX = clampAim(aimX-14);
+  if(e.key==='ArrowRight') aimX = clampAim(aimX+14);
+  if(e.key===' '||e.key==='Enter'){ e.preventDefault(); drop(); }
+});
+
+function drop(){
+  if(!canDrop || gameOver) return;
+  canDrop = false;
+  Composite.add(engine.world, makePlanet(clampAim(aimX), DROP_Y, current));
+  current = nextLvl; nextLvl = randLvl(); drawNext(nextLvl);
+  setTimeout(()=>{ canDrop = true; aimX = clampAim(aimX); }, 550);
+}
+
+document.getElementById('restart').addEventListener('click', start);
+document.getElementById('again').addEventListener('click', start);
+
+function endGame(){
+  gameOver = true;
+  document.getElementById('final').textContent = score;
+  document.getElementById('record-msg').textContent = score>0 && score>=best ? 'Nouveau record !' : `Record : ${best}`;
+  $over.hidden = false;
+}
+
+// Décor
+function drawSpace(now){
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#0b0e22'); bg.addColorStop(1,'#05060f');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+  // bande de la Voie lactée
+  ctx.save(); ctx.translate(W/2,H/2); ctx.rotate(-0.5);
+  const mw = ctx.createLinearGradient(0,-90,0,90);
+  mw.addColorStop(0,'rgba(123,92,255,0)'); mw.addColorStop(.5,'rgba(170,150,255,.16)'); mw.addColorStop(1,'rgba(123,92,255,0)');
+  ctx.fillStyle = mw; ctx.fillRect(-W, -90, W*2, 180); ctx.restore();
+  for(const s of STARS){
+    ctx.globalAlpha = .45 + .4*Math.sin(now/700 + s.p);
+    ctx.fillStyle = '#f1eee6'; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // sol : ceinture d'astéroïdes
+  ctx.fillStyle = 'rgba(201,184,255,.22)'; ctx.fillRect(0,H-FLOOR,W,FLOOR);
+  // ligne rouge
+  ctx.setLineDash([8,6]); ctx.strokeStyle = '#ff4d5e'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0,LINE_Y); ctx.lineTo(W,LINE_Y); ctx.stroke(); ctx.setLineDash([]);
+}
+
+let last = performance.now();
+function loop(now){
+  const dt = Math.min(33, now-last); last = now;
+  if(!gameOver) Engine.update(engine, dt);
+  drawSpace(now);
+
+  if(!gameOver){
+    const ax = clampAim(aimX);
+    ctx.strokeStyle='rgba(241,238,230,.18)'; ctx.lineWidth=2; ctx.setLineDash([3,7]);
+    ctx.beginPath(); ctx.moveTo(ax,DROP_Y); ctx.lineTo(ax,H-FLOOR); ctx.stroke(); ctx.setLineDash([]);
+    if(canDrop){ ctx.save(); ctx.translate(ax,DROP_Y); drawPlanet(ctx,current,PLANETS[current].r,0); ctx.restore(); }
+  }
+
+  const bodies = Composite.allBodies(engine.world).filter(b=>b.label==='planet');
+  let danger = false;
+  for(const b of bodies){
+    const top = b.position.y - PLANETS[b.lvl].r;
+    const settled = now - b.born > 900;
+    if(settled && top < LINE_Y && !b.merging){ b.above += dt; } else { b.above = 0; }
+    if(b.above > 0) danger = true;
+    ctx.save(); ctx.translate(b.position.x, b.position.y);
+    drawPlanet(ctx, b.lvl, PLANETS[b.lvl].r, b.angle);
+    if(b.above>400){ ctx.strokeStyle='#ff4d5e'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(0,0,PLANETS[b.lvl].r,0,Math.PI*2); ctx.stroke(); }
+    ctx.restore();
+    if(b.above > 2000 && !gameOver) endGame();
+  }
+  if(danger && !gameOver){
+    ctx.fillStyle = `rgba(255,77,94,${0.07+0.05*Math.sin(now/120)})`;
+    ctx.fillRect(0,0,W,LINE_Y);
+  }
+
+  pops = pops.filter(p=> now-p.t < (p.nova?700:400));
+  for(const p of pops){
+    const dur = p.nova?700:400, k = (now-p.t)/dur;
+    ctx.save(); ctx.globalAlpha = 1-k;
+    ctx.strokeStyle = p.nova ? '#ffc24a' : '#c9b8ff'; ctx.lineWidth = p.nova?5:3;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(1+k*(p.nova?2.5:.6)),0,Math.PI*2); ctx.stroke();
+    if(p.nova){ ctx.fillStyle='rgba(255,230,160,.5)'; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(1-k),0,Math.PI*2); ctx.fill(); }
+    ctx.restore();
+  }
+  requestAnimationFrame(loop);
+}
+
+start(); resize(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
